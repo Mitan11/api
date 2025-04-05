@@ -69,7 +69,7 @@ const registerUser = async (req, res) => {
         
                     <p>Ready to get started? Click the button below to log in:</p>
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="https://prescripto-one-theta.vercel.app" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Log In Now</a>
+                        <a href="https://prescripto-one-theta.vercel.app/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Log In Now</a>
                     </div>
         
                     <p>If you have any questions, feel free to reach out to our support team.</p>
