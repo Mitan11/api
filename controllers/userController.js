@@ -760,7 +760,7 @@ const changePassword = async (req, res) => {
                     <p>If you did not request this change, please <strong>contact our support team immediately</strong> to secure your account.</p>
         
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="https://prescripto-one-theta.vercel.app" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Login to Your Account</a>
+                        <a href="https://prescripto-one-theta.vercel.app/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Login to Your Account</a>
                     </div>
         
                     <p>For added security, we recommend updating your password regularly.</p>
