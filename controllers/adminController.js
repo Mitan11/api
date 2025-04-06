@@ -65,7 +65,7 @@ const addDoctor = async (req, res) => {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
                     <h2 style="color: #5f6FFF; text-align: center;">👨‍⚕️ Welcome to Our Platform, Dr. ${name}!</h2>
                     
-                    <p>Dear Dr. ${name},</p>
+                    <p>Dear ${name},</p>
         
                     <p>Your account has been successfully created. You can now access your dashboard and start managing appointments and patient records.</p>
         
