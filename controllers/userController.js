@@ -241,6 +241,49 @@ const bookAppointment = async (req, res) => {
 
         // updating the slots booked
         await doctorModel.findByIdAndUpdate(docId, { slots_booked: slotsBooked });
+        
+        // Setting up the email transporter
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.PASSWORD,
+            },
+        });
+
+        // Mail options
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: appointmentData.userData.email,
+            subject: `🩺 Appointment Confirmed - ${appointmentData.docData.name}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #5f6FFF; text-align: center;">✅ Appointment Confirmed!</h2>
+                    <p>Dear <strong>${appointmentData.userData.name}</strong>,</p>
+                    <p>We are pleased to inform you that your appointment has been successfully confirmed. Below are your appointment details:</p>
+        
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <p><strong>📌 Appointment ID:</strong> ${appointmentData._id}</p>
+                        <p><strong>👨‍⚕️ Doctor:</strong> Dr. ${appointmentData.docData.name}</p>
+                        <p><strong>📅 Date:</strong> ${appointmentData.slotDate}</p>
+                        <p><strong>⏰ Time:</strong> ${appointmentData.slotTime}</p>
+                    </div>
+        
+                    <p>Thank you for choosing our services. We look forward to assisting you.</p>
+        
+                    <p>Best Regards,</p>
+                    <p><strong>The Prescripto Team</strong></p>
+                    <hr>
+                    <p style="font-size: 12px; color: gray;">This is an automated email. Please do not reply directly to this email.</p>
+                    <br>
+                    <p style="font-size: 12px; color: gray;">If you did not make this appointment, please contact our support immediately.</p>
+                </div>
+            `,
+        };
+
+        // Sending email
+        await transporter.sendMail(mailOptions);
+
 
         // sending the response
         res.json({ success: true, message: "Appointment booked successfully" });
