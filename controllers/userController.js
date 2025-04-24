@@ -402,8 +402,8 @@ const makePayment = async (req, res) => {
                     },
                     customer_email: appointmentData.userData.email,
                     mode: "payment",
-                    success_url: `http://localhost:5173/my-appointments/payment-success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`,
-                    cancel_url: `http://localhost:5173/my-appointments/payment-cancel?appointment_id=${appointmentId}`
+                    success_url: `https://prescripto-one-theta.vercel.app/my-appointments/payment-success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`,
+                    cancel_url: `https://prescripto-one-theta.vercel.app/my-appointments/payment-cancel?appointment_id=${appointmentId}`
                 });
 
                 // Send session URL to frontend instead of redirecting
