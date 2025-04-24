@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUser, loginUser, getProfile, updateProfile, bookAppointment, listAppointment, cancelAppointment, makePayment, contactUs, addReview, getReviewedAppointments, getAllReviews, sendResetPasswordEmail, verifyOTP, resetPassword, changePassword } from "../controllers/userController.js";
+import { registerUser, loginUser, getProfile, updateProfile, bookAppointment, listAppointment, cancelAppointment, makePayment, contactUs, addReview, getReviewedAppointments, getAllReviews, sendResetPasswordEmail, verifyOTP, resetPassword, changePassword, handlePaymentSuccess } from "../controllers/userController.js";
 import authUser from "../middlewares/authUser.js";
 import upload from "../middlewares/multer.js";
 
@@ -29,6 +29,9 @@ userRouter.post("/cancelAppointment", authUser, cancelAppointment);
 
 // make payment route
 userRouter.post("/makePayment", authUser, makePayment);
+
+// payment success route
+userRouter.post("/payment-success", authUser, handlePaymentSuccess);
 
 // contact us route
 userRouter.post("/contactUs", contactUs);

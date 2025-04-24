@@ -7,6 +7,9 @@ import { v2 as cloudinary } from "cloudinary";
 import appointmentModel from "../models/appointmentModel.js";
 import nodemailer from "nodemailer";
 import reviewModel from "../models/reviewModel.js";
+import Stripe from 'stripe'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 // api to register a user
 const registerUser = async (req, res) => {
@@ -364,10 +367,102 @@ const makePayment = async (req, res) => {
             return res.json({ success: false, message: "Appointment not found or cancelled" });
         }
 
-        // updating the payment status
-        await appointmentModel.findByIdAndUpdate(appointmentId, { payment: true });
+        // Check if payment is already done
+        if (appointmentData.payment) {
+            return res.json({ success: false, message: "Payment already completed for this appointment" });
+        }
 
-        // Setting up the email transporter
+        // Create a product using doctor name and appointment info
+        const product = await stripe.products.create({
+            name: `Appointment with Dr. ${appointmentData.docData.name}`,
+            description: `Appointment on ${appointmentData.slotDate} at ${appointmentData.slotTime}`
+        });
+
+        if (product) {
+            const price = await stripe.prices.create({
+                product: product.id,
+                unit_amount: appointmentData.amount * 100, // Convert to cents/paise
+                currency: 'inr'
+            });
+
+            if (price.id) {
+                const session = await stripe.checkout.sessions.create({
+                    line_items: [
+                        {
+                            price: price.id,
+                            quantity: 1
+                        }
+                    ],
+                    metadata: {
+                        appointment_id: appointmentId,
+                        doctor_name: appointmentData.docData.name,
+                        patient_name: appointmentData.userData.name,
+                        appointment_date: appointmentData.slotDate,
+                        appointment_time: appointmentData.slotTime
+                    },
+                    customer_email: appointmentData.userData.email,
+                    mode: "payment",
+                    success_url: `http://localhost:5173/my-appointments/payment-success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`,
+                    cancel_url: `http://localhost:5173/my-appointments/payment-cancel?appointment_id=${appointmentId}`
+                });
+
+                // Send session URL to frontend instead of redirecting
+                return res.json({
+                    success: true,
+                    message: "Payment session created successfully",
+                    sessionUrl: session.url
+                });
+            }
+        }
+
+        // If the code reaches here, the payment session creation had an issue
+        return res.json({ success: false, message: "Failed to create payment session" });
+
+    } catch (error) {
+        console.log(error.message);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+
+// api to handle payment success webhook from Stripe
+const handlePaymentSuccess = async (req, res) => {
+    try {
+        const { appointmentId, session_id } = req.body;
+
+        if (!appointmentId || !session_id) {
+            return res.json({ success: false, message: "Missing required fields" });
+        }
+
+        // Verify the session with Stripe
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+
+        if (session.payment_status !== 'paid') {
+            return res.json({ success: false, message: "Payment not completed" });
+        }
+
+        // Update the appointment payment status
+        const appointmentData = await appointmentModel.findByIdAndUpdate(
+            appointmentId,
+            { payment: true },
+            { new: true }
+        );
+
+        if (!appointmentData) {
+            return res.json({ success: false, message: "Appointment not found" });
+        }
+
+        // Generate receipt number (timestamp + last 4 chars of appointment ID)
+        const receiptNumber = `PRSC-${Date.now().toString().slice(-6)}${appointmentData._id.toString().slice(-4)}`;
+
+        // Format the date for receipt
+        const paymentDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Send confirmation email with receipt
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -376,48 +471,105 @@ const makePayment = async (req, res) => {
             },
         });
 
-        // Mail options
         const mailOptions = {
             from: process.env.EMAIL,
             to: appointmentData.userData.email,
-            subject: `🩺 Appointment Payment Confirmed - ${appointmentData.docData.name}`,
+            subject: `🩺 Payment Receipt - Appointment with Dr. ${appointmentData.docData.name}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                    <h2 style="color: #5f6FFF; text-align: center;">✅ Payment Successful!</h2>
-                    <p>Dear <strong>${appointmentData.userData.name}</strong>,</p>
-                    <p>We are pleased to inform you that your appointment payment has been successfully processed. Below are your appointment details:</p>
-        
-                    <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                        <p><strong>📌 Appointment ID:</strong> ${appointmentData._id}</p>
-                        <p><strong>👨‍⚕️ Doctor:</strong> Dr. ${appointmentData.docData.name}</p>
-                        <p><strong>📅 Date:</strong> ${appointmentData.slotDate}</p>
-                        <p><strong>⏰ Time:</strong> ${appointmentData.slotTime}</p>
-                        <p><strong>💳 Amount Paid:</strong> $${appointmentData.amount}</p>
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #5f6FFF; margin: 0;">Prescripto</h1>
+                        <p style="color: #666; margin: 5px 0 0;">Healthcare Simplified</p>
                     </div>
-        
-                    <p>Thank you for choosing our services. We look forward to assisting you.</p>
-        
-                    <p>Best Regards,</p>
-                    <p><strong>The Prescripto Team</strong></p>
-                    <hr>
-                    <p style="font-size: 12px; color: gray;">This is an automated email. Please do not reply directly to this email.</p>
-                    <br>
-                    <p style="font-size: 12px; color: gray;">If you did not make this appointment, please contact our support immediately.</p>
+                    
+                    <div style="background-color: #5f6FFF; color: white; padding: 10px; text-align: center; border-radius: 5px;">
+                        <h2 style="margin: 0;">Payment Receipt</h2>
+                    </div>
+                    
+                    <div style="margin: 20px 0; padding: 15px; border: 1px dashed #ddd; border-radius: 5px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 8px; font-weight: bold;">Receipt Number:</td>
+                                <td style="padding: 8px;">${receiptNumber}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; font-weight: bold;">Date:</td>
+                                <td style="padding: 8px;">${paymentDate}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; font-weight: bold;">Payment Method:</td>
+                                <td style="padding: 8px;">Stripe (Online)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; font-weight: bold;">Transaction ID:</td>
+                                <td style="padding: 8px;">${session.payment_intent || session.id}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <h3 style="color: #5f6FFF; border-bottom: 1px solid #eee; padding-bottom: 10px;">Appointment Details</h3>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                        <tr>
+                            <td style="padding: 8px; font-weight: bold; width: 40%;">Patient Name:</td>
+                            <td style="padding: 8px;">${appointmentData.userData.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; font-weight: bold;">Doctor:</td>
+                            <td style="padding: 8px;">Dr. ${appointmentData.docData.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; font-weight: bold;">Speciality:</td>
+                            <td style="padding: 8px;">${appointmentData.docData.speciality}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; font-weight: bold;">Appointment Date:</td>
+                            <td style="padding: 8px;">${appointmentData.slotDate}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; font-weight: bold;">Appointment Time:</td>
+                            <td style="padding: 8px;">${appointmentData.slotTime}</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="background-color: #f9f9f9; border-radius: 5px; padding: 15px; margin: 20px 0;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px; font-weight: bold;">Service</td>
+                                <td style="padding: 10px; text-align: right; font-weight: bold;">Amount</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px;">Consultation Fee</td>
+                                <td style="padding: 10px; text-align: right;">₹${appointmentData.amount}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; font-weight: bold;">Total Paid</td>
+                                <td style="padding: 10px; text-align: right; font-weight: bold; color: #5f6FFF;">₹${appointmentData.amount}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 25px 0; padding: 15px; background-color: #e8f4ff; border-radius: 5px;">
+                        <p style="margin: 0; color: #5f6FFF; font-weight: bold;">Thank you for choosing Prescripto for your healthcare needs!</p>
+                    </div>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                        <p>This is an official receipt for your payment. Please keep it for your records.</p>
+                        <p>If you have any questions about this receipt, please contact our support team.</p>
+                        <p style="margin-top: 15px; font-size: 11px; color: #999;">This is an automated email. Please do not reply directly to this email.</p>
+                    </div>
                 </div>
             `,
         };
 
-        // Sending email
         await transporter.sendMail(mailOptions);
 
-        // sending the response
-        res.json({ success: true, message: "Payment successful" });
-
+        res.json({ success: true, message: "Payment confirmed successfully" });
     } catch (error) {
         console.log(error.message);
         res.json({ success: false, message: error.message });
     }
-}
+};
 
 // api to contact us
 const contactUs = async (req, res) => {
@@ -827,4 +979,4 @@ const changePassword = async (req, res) => {
     }
 }
 
-export { registerUser, loginUser, getProfile, updateProfile, bookAppointment, listAppointment, cancelAppointment, makePayment, contactUs, addReview, getReviewedAppointments, getAllReviews, sendResetPasswordEmail, verifyOTP, resetPassword, changePassword };
+export { registerUser, loginUser, getProfile, updateProfile, bookAppointment, listAppointment, cancelAppointment, makePayment, contactUs, addReview, getReviewedAppointments, getAllReviews, sendResetPasswordEmail, verifyOTP, resetPassword, changePassword, handlePaymentSuccess };
