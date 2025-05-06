@@ -1,5 +1,5 @@
 import express from "express";
-import { doctorList, loginDoctor, appointmentsDoctor, appointmentCompleted, appointmentCancelled, doctorDashboard, doctorProfile, updateDoctorProfile, doctorReviews, deleteDoctorReview, changePassword } from "../controllers/doctorController.js";
+import { doctorList, loginDoctor, appointmentsDoctor, appointmentCompleted, appointmentCancelled, doctorDashboard, doctorProfile, updateDoctorProfile, doctorReviews, changePassword } from "../controllers/doctorController.js";
 import authDoctor from "../middlewares/authDoctor.js";
 // doctor router
 const doctorRouter = express.Router();
@@ -31,8 +31,6 @@ doctorRouter.post("/update-profile", authDoctor, updateDoctorProfile);
 // api to get the doctor reviews
 doctorRouter.get("/reviews", authDoctor, doctorReviews);
 
-// api to delete the doctor review
-doctorRouter.post("/delete-review", authDoctor, deleteDoctorReview);
 
 // api to change the password
 doctorRouter.post("/change-password", authDoctor, changePassword);

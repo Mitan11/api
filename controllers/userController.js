@@ -72,7 +72,7 @@ const registerUser = async (req, res) => {
         
                     <p>Ready to get started? Click the button below to log in:</p>
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="https://prescripto-one-theta.vercel.app/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Log In Now</a>
+                        <a href="https://demo.com/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Log In Now</a>
                     </div>
         
                     <p>If you have any questions, feel free to reach out to our support team.</p>
@@ -244,7 +244,7 @@ const bookAppointment = async (req, res) => {
 
         // updating the slots booked
         await doctorModel.findByIdAndUpdate(docId, { slots_booked: slotsBooked });
-        
+
         // Setting up the email transporter
         const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -353,6 +353,7 @@ const cancelAppointment = async (req, res) => {
     }
 }
 
+
 // api to make payment of an appointment using razorpay
 const makePayment = async (req, res) => {
     try {
@@ -402,8 +403,8 @@ const makePayment = async (req, res) => {
                     },
                     customer_email: appointmentData.userData.email,
                     mode: "payment",
-                    success_url: `https://prescripto-one-theta.vercel.app/my-appointments/payment-success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`,
-                    cancel_url: `https://prescripto-one-theta.vercel.app/my-appointments/payment-cancel?appointment_id=${appointmentId}`
+                    success_url: `http://localhost:5173/my-appointments/payment-success?session_id={CHECKOUT_SESSION_ID}&appointment_id=${appointmentId}`,
+                    cancel_url: `http://localhost:5173/my-appointments/payment-cancel?appointment_id=${appointmentId}`
                 });
 
                 // Send session URL to frontend instead of redirecting
@@ -423,7 +424,6 @@ const makePayment = async (req, res) => {
         res.json({ success: false, message: error.message });
     }
 }
-
 
 // api to handle payment success webhook from Stripe
 const handlePaymentSuccess = async (req, res) => {
@@ -955,10 +955,10 @@ const changePassword = async (req, res) => {
                     <p>If you did not request this change, please <strong>contact our support team immediately</strong> to secure your account.</p>
         
                     <div style="text-align: center; margin: 20px 0;">
-                        <a href="https://prescripto-one-theta.vercel.app/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Login to Your Account</a>
+                        <a href="https://demo.com/login" style="background: #5f6FFF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Login to Your Account</a>
                     </div>
         
-                    <p>For added security, we recommend updating your password regularly.</p>
+                    <p>For added security, we recommend updating your password regularly and enabling two-factor authentication if available.</p>
         
                     <p>Best Regards,</p>
                     <p><strong>Your Support Team</strong></p>

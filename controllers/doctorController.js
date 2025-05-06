@@ -235,20 +235,6 @@ const doctorReviews = async (req, res) => {
     }
 }
 
-// api to delete the doctor review
-const deleteDoctorReview = async (req, res) => {
-    try {
-        const { reviewId } = req.body
-
-        // deleting the review
-        await reviewModel.findByIdAndDelete(reviewId)
-
-        res.json({ success: true, message: "Review deleted successfully" })
-    } catch (error) {
-        console.log(error);
-        res.json({ success: false, message: error.message })
-    }
-}
 
 // api to change the password
 const changePassword = async (req, res) => {
@@ -343,4 +329,4 @@ const changePassword = async (req, res) => {
     }
 }
 
-export { changeAvailability, doctorList, loginDoctor, appointmentsDoctor, appointmentCompleted, appointmentCancelled, doctorDashboard, doctorProfile, updateDoctorProfile, doctorReviews, deleteDoctorReview, changePassword };
+export { changeAvailability, doctorList, loginDoctor, appointmentsDoctor, appointmentCompleted, appointmentCancelled, doctorDashboard, doctorProfile, updateDoctorProfile, doctorReviews, changePassword };
